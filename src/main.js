@@ -4,6 +4,14 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 
+import iView from 'iview';
+import 'iview/dist/styles/iview.css';
+Vue.use(iView)
+
+import VueVideoPlayer from 'vue-video-player'
+import 'video.js/dist/video-js.css'
+Vue.use(VueVideoPlayer)
+
 Vue.config.productionTip = false
 
 /* eslint-disable no-new */
