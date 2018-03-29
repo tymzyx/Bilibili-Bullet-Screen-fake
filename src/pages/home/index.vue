@@ -22,7 +22,11 @@
 
 <style>
   .player-window {
-    width: 9.8rem;
-    height: 4.8rem;
+    /*position: absolute;*/
+    /*left: 50%;*/
+    /*top: 40px;*/
+    /*transform: translateX(-50%);*/
+    width: 9rem;
+    height: 6rem;
   }
 </style>
