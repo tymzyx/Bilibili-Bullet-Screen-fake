@@ -31,21 +31,19 @@
       <div class="ctrl-time-shower">
         <span>{{playerCtrl.currentTime}} / {{playerCtrl.duration}}</span>
       </div>
-      <div class="ctrl-volume">
-        <i class="iconfont icon-voice" v-if="true"></i>
-        <i class="iconfont icon-voice-close" v-if="false"></i>
-        <div class="ctrl-volume-bar" v-if="false">
+      <div class="ctrl-volume" id="ctrl-volume">
+        <i class="iconfont icon-voice" v-if="!playerCtrl.isSilence" @click="triggerSilence"></i>
+        <i class="iconfont icon-voice-close" v-else @click="triggerSilence"></i>
+        <div class="ctrl-volume-bar" v-if="playerCtrl.isSetVolume">
           <el-slider v-model="playerCtrl.volume" :max="100" class="volume-slider" vertical height="60px"
                      @change="volumeBarChange"></el-slider>
         </div>
       </div>
       <div class="ctrl-resolution">
-        <span>自动</span>
-        <div class="ctrl-resolution-select">
-          <span>高清 720P</span>
-          <span>清晰 480P</span>
-          <span>流畅 360P</span>
-          <span>自动(480P)</span>
+        <span id="resolution-text">{{playerCtrl.selectedResolution}}</span>
+        <div class="ctrl-resolution-select" v-if="playerCtrl.isSetResolution" id="ctrl-resolution-select">
+          <span v-for="item in playerCtrl.resolutions" @click="changeResolution(item.index)"
+                :class="{'resolution-selected': item.index === playerCtrl.resolutionIndex}">{{item.text}}</span>
         </div>
       </div>
       <div class="ctrl-others">
@@ -66,12 +64,28 @@
         </div>
       </div>
     </div>
+
+    <!--弹幕-->
+    <div class="bullet-wrapper">
+      <div class="text-box">
+      </div>
+    </div>
+    <span class="length bullet-text"></span>
   </div>
 </template>
 
 <script>
+  import $ from 'jquery'
+
   import utils from '../assets/js/utils'
   import ElSlider from "element-ui/packages/slider/src/main";
+
+  let resolutions = [
+    {text: '高清 720P', index: 0},
+    {text: '清晰 480P', index: 1},
+    {text: '流畅 360P', index: 2},
+    {text: '自动(360P)', index: 3},
+  ];
 
   export default {
     components: {ElSlider},
@@ -94,10 +108,15 @@
           durationInt: 0,
           duration: 0,
           currentTime: 0,
-          volume: 10, // 音量控制
-          voiceSlider: 50, // 声音控制
+          volume: 10,  // 音量控制
           isFullScreen: false,
-          isBullet: true
+          isBullet: true,
+          isSetVolume: false,  // 是否显示音量控制条
+          isSilence: false,
+          isSetResolution: false,  // 是否显示清晰度选择框
+          resolutionIndex: 3,
+          resolutions: resolutions,
+          selectedResolution: '自动',
         }
       }
     },
@@ -108,7 +127,11 @@
       }
     },
     mounted() {
-      this.player.volume(this.playerCtrl.volume/100)
+      this.player.volume(this.playerCtrl.volume/100);
+
+      this.initEvent();
+
+      this.bulletAnimate('test test test', 'white', '20px');
     },
     methods: {
       onPlayerLoadedData(player) {
@@ -120,6 +143,44 @@
         this.playerCtrl.currentTime = utils.secondToTime(player.currentTime());
         this.playerCtrl.currentTimeInt = Math.floor(player.currentTime());
         // console.log("当前音量",player.volume());
+      },
+      initEvent() {
+        let _this = this;
+        let resolutionText = document.getElementById("resolution-text");
+        let inSelectResolution = false;
+        resolutionText.addEventListener("mouseover", function() {
+          _this.playerCtrl.isSetResolution = true;
+          setTimeout(function() {
+            let resolutionSelect = document.getElementById("ctrl-resolution-select");
+            resolutionSelect.addEventListener("mouseenter", function() {
+              _this.playerCtrl.isSetResolution = true;
+              inSelectResolution = true;
+            });
+            resolutionSelect.addEventListener("mouseleave", function() {
+              _this.playerCtrl.isSetResolution = false;
+              inSelectResolution = false;
+            });
+          }, 10);
+        });
+        resolutionText.addEventListener("mouseout", function() {
+          // _this.playerCtrl.isSetResolution = false;
+          setTimeout(function() {
+            if (!inSelectResolution) {
+              _this.playerCtrl.isSetResolution = false;
+            }
+          }, 500);
+        });
+
+        let ctrlVolume = document.getElementById('ctrl-volume');
+        ctrlVolume.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isSetVolume = true;
+        })
+        ctrlVolume.addEventListener('mouseleave', function() {
+          setTimeout(function () {
+            _this.playerCtrl.isSetVolume = false;
+          }, 500);
+        });
+
       },
 
       // 自定义控制条
@@ -134,12 +195,28 @@
       volumeBarChange(val) {
         this.playerCtrl.volume = val;
         this.player.volume(val/100);
+        val = Math.floor(val);
+        if (val == 0) {
+          this.playerCtrl.isSilence = true;
+        } else {
+          this.playerCtrl.isSilence = false;
+        }
       },
-      videoStart() {
-        this.isStart = true;
-        this.isPaused = false;
-        this.playerCtrl.isPlay = true;
-        this.player.play();
+      triggerSilence() {
+        if (this.playerCtrl.isSilence) {
+          this.volumeBarChange(10);
+        } else {
+          this.volumeBarChange(0);
+        }
+      },
+      changeResolution(index) {
+        this.playerCtrl.resolutionIndex = index;
+        this.playerCtrl.resolutions.forEach(val => {
+          if (val.index === index) {
+            this.playerCtrl.selectedResolution = val.text.substr(0, 2);
+            return;
+          }
+        });
       },
       fullScreen() {
         if(!this.player.isFullscreen()){
@@ -149,6 +226,12 @@
           this.player.exitFullscreen();
           this.player.isFullscreen(false);
         }
+      },
+      videoStart() {
+        this.isStart = true;
+        this.isPaused = false;
+        this.playerCtrl.isPlay = true;
+        this.player.play();
       },
       triggerStatus() {
         if (!this.isStart) {
@@ -163,7 +246,31 @@
           this.playerCtrl.isPlay = false;
           this.player.pause();
         }
-      }
+      },
+
+      // 弹幕相关方法
+      bulletAnimate(content, color, fontSize) {
+        content = content.toString();
+        let lengthDom = $('.length');
+        lengthDom.eq(0).show();
+        let length = lengthDom.html(content).eq(0).width();
+        lengthDom.eq(0).hide();
+        let time = ((400 - length) / 100 + 13) * 800;
+        $('.bullet-wrapper .text-box').eq(0).append(`<p class="bullet-text">${content}</p>`);
+        let top = 22 * Math.floor(Math.random() * 480 / 22);
+
+        $('.bullet-wrapper .bullet-text').last().css({
+          'top': `${top}px`,
+          'left': '720px',
+          'width': `${length}px`,
+          'color': color,
+          'font-size': fontSize
+        }).animate({
+          left: `-${length}px`
+        }, time, 'linear', function(){
+          $(this).remove();
+        });
+      },
     }
   }
 </script>
@@ -283,7 +390,7 @@
   }
   .ctrl-resolution {
     position: relative;
-    padding: 0 28px;
+    padding: 0 24px;
     font-size: 12px;
     color: #888;
   }
@@ -308,6 +415,9 @@
     display: flex;
     align-items: center;
   }
+  .resolution-selected {
+    color: dodgerblue;
+  }
   .ctrl-others {
     display: flex;
   }
@@ -316,5 +426,22 @@
     color: #888;
     margin: 0 4px;
     cursor: pointer;
+  }
+
+  .bullet-wrapper {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .length {
+    display: none;
+  }
+  .bullet-text {
+    font-size: 20px;
+    line-height: 20px;
+    position: absolute;
+    top: -300px;
   }
 </style>

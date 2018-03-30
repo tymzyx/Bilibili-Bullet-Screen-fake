@@ -26,7 +26,9 @@
     /*left: 50%;*/
     /*top: 40px;*/
     /*transform: translateX(-50%);*/
-    width: 9rem;
-    height: 6rem;
+    /*width: 9rem;*/
+    /*height: 6rem;*/
+    width: 720px;
+    height: 480px;
   }
 </style>
