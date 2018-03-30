@@ -64,8 +64,11 @@
         </div>
       </div>
     </div>
-
     <!--弹幕-->
+    <div class="send-bullet-wrapper">
+      <input v-model="bulletInfo.content" type="text">
+      <button type="button" @click="shootBullet">发送弹幕</button>
+    </div>
     <div class="bullet-wrapper">
       <div class="text-box">
       </div>
@@ -75,10 +78,10 @@
 </template>
 
 <script>
-  import $ from 'jquery'
+  import $ from 'jquery';
+  import io from 'socket.io-client'
 
-  import utils from '../assets/js/utils'
-  import ElSlider from "element-ui/packages/slider/src/main";
+  import utils from '../assets/js/utils';
 
   let resolutions = [
     {text: '高清 720P', index: 0},
@@ -88,7 +91,6 @@
   ];
 
   export default {
-    components: {ElSlider},
     data() {
       return {
         playerOptions: {
@@ -117,6 +119,11 @@
           resolutionIndex: 3,
           resolutions: resolutions,
           selectedResolution: '自动',
+        },
+        socket: '',
+        allBullet: [],
+        bulletInfo: {
+          content: '',
         }
       }
     },
@@ -132,6 +139,8 @@
       this.initEvent();
 
       this.bulletAnimate('test test test', 'white', '20px');
+
+      this.connect();
     },
     methods: {
       onPlayerLoadedData(player) {
@@ -145,6 +154,7 @@
         // console.log("当前音量",player.volume());
       },
       initEvent() {
+
         let _this = this;
         let resolutionText = document.getElementById("resolution-text");
         let inSelectResolution = false;
@@ -249,6 +259,76 @@
       },
 
       // 弹幕相关方法
+      connect() {
+        let _this = this;
+        this.socket = io.connect('http://localhost:6677');
+        this.socket.emit('setConnect', 'admin');
+
+        this.socket.on('getBullet', function (data) {
+          console.log('allBullet: ', data);
+          if (data[0].status === 0) {
+            console.log(data[0].message);
+          } else {
+            _this.allBullet = data;
+            _this.playBullet();
+          }
+        });
+
+        this.socket.emit('bulletRequest', {videoId: 'test'});
+      },
+      getBulletTime() {
+        let date = new Date();
+        let videoTime = this.player.currentTime();
+        let year = String(date.getYear() + 1900);
+        let month = String(date.getMonth() + 1);
+        month = month.length === 1 ? '0' + month : month;
+        let day = date.getDate();
+        day = day.length === 1 ? '0' + day : day;
+        let hour = date.getHours();
+        hour = hour.length === 1 ? '0' + hour : hour;
+        let minute = date.getMinutes();
+        minute = minute.length === 1 ? '0' + minute : minute;
+        let second = date.getSeconds();
+        second = second.length === 1 ? '0' + second : second;
+        return {
+          videoTime: String(videoTime),
+          sendTime: {
+            Y: year,
+            M: month,
+            D: day,
+            hh: hour,
+            mm: minute,
+            ss: second
+          }
+        }
+      },
+      shootBullet() {
+        if (this.bulletInfo.content.trim() === '') {
+          return;
+        }
+        let bulletTime = this.getBulletTime();
+        this.bulletInfo.videoTime = bulletTime.videoTime;
+        this.bulletInfo.sendTime = bulletTime.sendTime;
+        this.bulletInfo.videoId = 'test';
+        this.bulletInfo.content = this.bulletInfo.content.trim();
+        this.bulletInfo.userId = 'admin';
+        this.bulletInfo.color = 'white';
+        this.bulletInfo.fontSize = '20px';
+        this.socket.emit('saveBullet', this.bulletInfo);
+
+        this.bulletAnimate(this.bulletInfo.content.trim(), 'white', '20px');
+        this.bulletInfo.content = '';
+      },
+      playBullet() {
+        let _this = this;
+        setInterval(function() {
+          _this.allBullet.forEach(val => {
+            if (_this.player.currentTime() == val.videoTime) {
+              _this.bulletAnimate(val.content, val.color, val.fontSize);
+            }
+          });
+        }, 1000);
+      },
       bulletAnimate(content, color, fontSize) {
         content = content.toString();
         let lengthDom = $('.length');
@@ -257,7 +337,7 @@
         lengthDom.eq(0).hide();
         let time = ((400 - length) / 100 + 13) * 800;
         $('.bullet-wrapper .text-box').eq(0).append(`<p class="bullet-text">${content}</p>`);
-        let top = 22 * Math.floor(Math.random() * 480 / 22);
+        let top = 22 * Math.floor(Math.random() * 420 / 22);
 
         $('.bullet-wrapper .bullet-text').last().css({
           'top': `${top}px`,
@@ -443,5 +523,11 @@
     line-height: 20px;
     position: absolute;
     top: -300px;
+  }
+  .send-bullet-wrapper {
+    height: 36px;
+    line-height: 36px;
+    margin-top: 6px;
+    text-align: right;
   }
 </style>
