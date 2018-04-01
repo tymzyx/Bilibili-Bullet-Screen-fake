@@ -66,8 +66,16 @@
     </div>
     <!--弹幕-->
     <div class="send-bullet-wrapper">
-      <input v-model="bulletInfo.content" type="text">
-      <button type="button" @click="shootBullet">发送弹幕</button>
+      <div>
+
+      </div>
+      <div>
+
+      </div>
+      <div>
+        <input v-model="bulletInfo.content" type="text">
+        <button type="button" @click="shootBullet">发送弹幕</button>
+      </div>
     </div>
     <div class="bullet-wrapper">
       <div class="text-box">
