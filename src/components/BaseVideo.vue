@@ -9,12 +9,12 @@
       </video-player>
     </div>
 
-    <div class="pauseStatus" v-show="isPaused && isStart">
-      <div @click="triggerStatus">
-        <i class="iconfont icon-play"></i>
-      </div>
-    </div>
-    <div class="start-btn" @click="videoStart" v-if="!isStart">
+    <!--<div class="pauseStatus" v-show="isPaused && isStart">-->
+      <!--<div @click="triggerStatus">-->
+        <!--<i class="iconfont icon-play"></i>-->
+      <!--</div>-->
+    <!--</div>-->
+    <div class="start-btn" @click="triggerStatus" v-if="isPaused">
       <button type="button">
         <i class="iconfont icon-play"></i>
       </button>
@@ -95,12 +95,16 @@
       </div>
     </div>
     <span class="length bullet-text"></span>
+
+    <button type="button" @click="bulletPauseTrigger">点击就送</button>
   </div>
 </template>
 
 <script>
-  import $ from 'jquery';
-  import io from 'socket.io-client'
+  // import $ from '../assets/js/jquery-vendor'
+  // import '@egjs/jquery-pauseresume';
+
+  import io from 'socket.io-client';
 
   import utils from '../assets/js/utils';
 
@@ -122,7 +126,7 @@
           }],
           controls:false,
         },
-        isStart: false,
+        isStart: true,
         isPaused: true,
         playerCtrl: {
           isPlay: false,
@@ -153,7 +157,8 @@
         allBullet: [],
         bulletInfo: {
           content: '',
-        }
+        },
+        isBulletPause: true,  // 是否停止播放弹幕
       }
     },
     props: [],
@@ -317,6 +322,7 @@
           this.playerCtrl.isPlay = false;
           this.player.pause();
         }
+        this.bulletPauseTrigger();
       },
 
       // 弹幕相关方法
@@ -384,7 +390,7 @@
         let _this = this;
         setInterval(function() {
           _this.allBullet.forEach(val => {
-            if (_this.player.currentTime() == val.videoTime) {
+            if (_this.player.currentTime() == val.videoTime && !_this.isPaused) {
               _this.bulletAnimate(val.content, val.color, val.fontSize);
             }
           });
@@ -411,7 +417,20 @@
         }, time, 'linear', function(){
           $(this).remove();
         });
+
+        if (this.isPaused) {
+          $('.bullet-wrapper .bullet-text').last().pause();
+        }
       },
+      bulletPauseTrigger() {
+        if (this.isBulletPause) {
+          $('.bullet-wrapper .bullet-text').resume();
+          this.isBulletPause = false;
+        } else {
+          $('.bullet-wrapper .bullet-text').pause();
+          this.isBulletPause = true;
+        }
+      }
     }
   }
 </script>
@@ -436,8 +455,8 @@
   }
   .start-btn {
     position: absolute;
-    right: 0.2rem;
-    bottom: 0.2rem;
+    right: 30px;
+    bottom: 24px;
     z-index: 100;
   }
   .start-btn button {
