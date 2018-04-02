@@ -47,34 +47,47 @@
         </div>
       </div>
       <div class="ctrl-others">
-        <div>
+        <div class="ctrl-bullet" id="ctrl-bullet">
           <i class="iconfont icon-ic_speaker_notes" v-if="playerCtrl.isBullet" @click="playerCtrl.isBullet = false"></i>
           <i class="iconfont icon-ic_speaker_notes_off" v-else @click="playerCtrl.isBullet = true"></i>
+          <span v-if="playerCtrl.isTips.isTipBullet">
+            {{playerCtrl.isBullet ? '关闭弹幕' : '打开弹幕'}}
+          </span>
         </div>
-        <div>
-          <i class="iconfont icon-xunhuan1" v-if="true"></i>
-          <i class="iconfont icon-jinzhi" v-else></i>
+        <div class="ctrl-circle" id="ctrl-circle">
+          <i class="iconfont icon-xunhuan1" v-if="playerCtrl.isCircle" @click="playerCtrl.isCircle = false"></i>
+          <i class="iconfont icon-jinzhi" v-else @click="playerCtrl.isCircle = true"></i>
+          <span v-if="playerCtrl.isTips.isTipCircle">
+            {{playerCtrl.isCircle ? '关闭洗脑循环' : '打开洗脑循环'}}
+          </span>
         </div>
-        <div>
+        <div class="ctrl-wide" id="ctrl-wide">
           <i class="iconfont icon-Television"></i>
+          <span v-if="playerCtrl.isTips.isTipWide">
+            宽屏模式
+          </span>
         </div>
-        <div>
+        <div class="ctrl-full" id="ctrl-full">
           <i class="iconfont icon-quanping" v-if="true" @click="fullScreen"></i>
           <i class="iconfont icon-tuichuquanping" v-else @click="fullScreen"></i>
+          <span v-if="playerCtrl.isTips.isTipFull">
+            {{playerCtrl.isFull ? '退出全屏' : '进入全屏'}}
+          </span>
         </div>
       </div>
     </div>
     <!--弹幕-->
     <div class="send-bullet-wrapper">
-      <div>
-
+      <div class="bullet-ctrl">
+        <i class="iconfont icon-ic_speaker_notes"></i>
       </div>
-      <div>
-
+      <div class="bullet-color-ctrl">
+        <i class="iconfont icon-zhediemianban"></i>
       </div>
-      <div>
-        <input v-model="bulletInfo.content" type="text">
-        <button type="button" @click="shootBullet">发送弹幕</button>
+      <div class="bullet-shoot">
+        <input v-model="bulletInfo.content" type="text" placeholder="您可以这里输入弹幕吐槽哦~">
+        <span>弹幕礼仪<i class="iconfont icon-right"></i></span>
+        <button type="button" @click="shootBullet">发送<i class="iconfont icon-right"></i></button>
       </div>
     </div>
     <div class="bullet-wrapper">
@@ -120,13 +133,21 @@
           currentTime: 0,
           volume: 10,  // 音量控制
           isFullScreen: false,
-          isBullet: true,
+          isBullet: true,  // 是否显示弹幕
+          isCircle: false,  // 是否打开洗脑循环
+          isFull: false,  // 是否全屏
           isSetVolume: false,  // 是否显示音量控制条
           isSilence: false,
           isSetResolution: false,  // 是否显示清晰度选择框
           resolutionIndex: 3,
           resolutions: resolutions,
           selectedResolution: '自动',
+          isTips: {
+            isTipBullet: false,
+            isTipCircle: false,
+            isTipWide: false,
+            isTipFull: false
+          }
         },
         socket: '',
         allBullet: [],
@@ -192,11 +213,43 @@
         let ctrlVolume = document.getElementById('ctrl-volume');
         ctrlVolume.addEventListener('mouseenter', function() {
           _this.playerCtrl.isSetVolume = true;
-        })
+        });
         ctrlVolume.addEventListener('mouseleave', function() {
           setTimeout(function () {
             _this.playerCtrl.isSetVolume = false;
           }, 500);
+        });
+
+        let ctrlBullet = document.getElementById('ctrl-bullet');
+        ctrlBullet.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isTips.isTipBullet = true;
+        });
+        ctrlBullet.addEventListener('mouseleave', function() {
+          _this.playerCtrl.isTips.isTipBullet = false;
+        });
+
+        let ctrlCircle = document.getElementById('ctrl-circle');
+        ctrlCircle.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isTips.isTipCircle = true;
+        });
+        ctrlCircle.addEventListener('mouseleave', function() {
+          _this.playerCtrl.isTips.isTipCircle = false;
+        });
+
+        let ctrlWide = document.getElementById('ctrl-wide');
+        ctrlWide.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isTips.isTipWide = true;
+        });
+        ctrlWide.addEventListener('mouseleave', function() {
+          _this.playerCtrl.isTips.isTipWide = false;
+        });
+
+        let ctrlFull = document.getElementById('ctrl-full');
+        ctrlFull.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isTips.isTipFull = true;
+        });
+        ctrlFull.addEventListener('mouseleave', function() {
+          _this.playerCtrl.isTips.isTipFull = false;
         });
 
       },
@@ -431,7 +484,6 @@
     color: #ddd;
   }
   .ctrl-bar-wrapper {
-    width: 100%;
     height: 32px;
     display: flex;
     align-items: center;
@@ -508,12 +560,37 @@
   }
   .ctrl-others {
     display: flex;
+    position: relative;
   }
   .ctrl-others div {
     font-size: 18px;
     color: #888;
     margin: 0 4px;
     cursor: pointer;
+  }
+  .ctrl-bullet span, .ctrl-circle span, .ctrl-wide span, .ctrl-full span {
+    position: absolute;
+    color: #fff;
+    font-size: 12px;
+    background: rgba(10, 10, 10, 0.6);
+    padding: 3px;
+    display: inline-block;
+  }
+  .ctrl-bullet span {
+    left: -16px;
+    top: -28px;
+  }
+  .ctrl-circle span {
+    left: -4px;
+    top: -28px;
+  }
+  .ctrl-wide span {
+    left: 32px;
+    top: -28px;
+  }
+  .ctrl-full span {
+    left: 42px;
+    top: -28px;
   }
 
   .bullet-wrapper {
@@ -533,9 +610,60 @@
     top: -300px;
   }
   .send-bullet-wrapper {
+    height: 40px;
+    /*margin-top: 6px;*/
+    display: flex;
+    border: 1px solid #ddd;
+    border-top: none;
+  }
+  .bullet-ctrl, .bullet-color-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+  }
+  .bullet-ctrl {
+    margin: 0 20px 0 10px;
+  }
+  .bullet-color-ctrl {
+    padding-right: 10px;
+    border-right: 1px solid #ddd;
+  }
+  .bullet-ctrl i, .bullet-color-ctrl i {
+    font-size: 18px;
+  }
+  .bullet-shoot {
+    flex: 1;
+    margin:0 10px 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: right;
+  }
+  .bullet-shoot input {
+    background-color: #fff;
+    border: none;
+    height: 24px;
+    outline: none;
+    flex: 1;
+  }
+  .bullet-shoot button {
     height: 36px;
-    line-height: 36px;
-    margin-top: 6px;
-    text-align: right;
+    width: 66px;
+    text-align: center;
+    color: #fff;
+    cursor: pointer;
+    background: dodgerblue;
+    box-sizing: border-box;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    outline: none;
+  }
+  .bullet-shoot i {
+    font-size: 10px;
+  }
+  .bullet-shoot span {
+    font-size: 14px;
+    color: #888;
+    margin:0 10px;
   }
 </style>
