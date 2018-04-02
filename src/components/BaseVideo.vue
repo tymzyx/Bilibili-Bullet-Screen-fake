@@ -5,6 +5,8 @@
                     :options="playerOptions"
                     @loadeddata="onPlayerLoadedData($event)"
                     @timeupdate="onPlayerTimeUpdate($event)"
+                    @waiting="onPlayerWaiting($event)"
+                    @playing="onPlayerPlaying($event)"
       >
       </video-player>
     </div>
@@ -81,8 +83,11 @@
       <div class="bullet-ctrl">
         <i class="iconfont icon-ic_speaker_notes"></i>
       </div>
-      <div class="bullet-color-ctrl">
-        <i class="iconfont icon-zhediemianban"></i>
+      <div class="bullet-color-ctrl" id="bullet-color-ctrl">
+        <colorPicker v-model="bulletInfo.color"></colorPicker>
+        <span v-if="playerCtrl.isTips.isTipShootColor">
+          弹幕颜色
+        </span>
       </div>
       <div class="bullet-shoot">
         <input v-model="bulletInfo.content" type="text" placeholder="您可以这里输入弹幕吐槽哦~">
@@ -96,7 +101,9 @@
     </div>
     <span class="length bullet-text"></span>
 
-    <button type="button" @click="bulletPauseTrigger">点击就送</button>
+    <div style="z-index: 1100">
+
+    </div>
   </div>
 </template>
 
@@ -108,6 +115,8 @@
 
   import utils from '../assets/js/utils';
 
+  import ColorPicker from '../plugins/vue-color-picker/colorPicker'
+
   let resolutions = [
     {text: '高清 720P', index: 0},
     {text: '清晰 480P', index: 1},
@@ -116,6 +125,7 @@
   ];
 
   export default {
+    components: {ColorPicker},
     data() {
       return {
         playerOptions: {
@@ -128,6 +138,7 @@
         },
         isStart: true,
         isPaused: true,
+        isWaiting: false,
         playerCtrl: {
           isPlay: false,
           isEnd: false,
@@ -150,13 +161,15 @@
             isTipBullet: false,
             isTipCircle: false,
             isTipWide: false,
-            isTipFull: false
+            isTipFull: false,
+            isTipShootColor: false,
           }
         },
         socket: '',
         allBullet: [],
         bulletInfo: {
           content: '',
+          color: '#fff',
         },
         isBulletPause: true,  // 是否停止播放弹幕
       }
@@ -186,6 +199,16 @@
         this.playerCtrl.currentTime = utils.secondToTime(player.currentTime());
         this.playerCtrl.currentTimeInt = Math.floor(player.currentTime());
         // console.log("当前音量",player.volume());
+      },
+      onPlayerWaiting(player) {
+        this.isWaiting = true;
+        this.bulletPauseTrigger();
+      },
+      onPlayerPlaying(player) {
+        if (this.isWaiting) {
+          this.isWaiting = false;
+          this.bulletPauseTrigger();
+        }
       },
       initEvent() {
 
@@ -255,6 +278,14 @@
         });
         ctrlFull.addEventListener('mouseleave', function() {
           _this.playerCtrl.isTips.isTipFull = false;
+        });
+
+        let ctrlShootColor = document.getElementById('bullet-color-ctrl');
+        ctrlShootColor.addEventListener('mouseenter', function() {
+          _this.playerCtrl.isTips.isTipShootColor = true;
+        });
+        ctrlShootColor.addEventListener('mouseleave', function() {
+          _this.playerCtrl.isTips.isTipShootColor = false;
         });
 
       },
@@ -379,18 +410,19 @@
         this.bulletInfo.videoId = 'test';
         this.bulletInfo.content = this.bulletInfo.content.trim();
         this.bulletInfo.userId = 'admin';
-        this.bulletInfo.color = 'white';
+        this.bulletInfo.color = this.bulletInfo.color;
+        console.log(this.bulletInfo.color);
         this.bulletInfo.fontSize = '20px';
         this.socket.emit('saveBullet', this.bulletInfo);
 
-        this.bulletAnimate(this.bulletInfo.content.trim(), 'white', '20px');
+        this.bulletAnimate(this.bulletInfo.content.trim(), this.bulletInfo.color, '20px');
         this.bulletInfo.content = '';
       },
       playBullet() {
         let _this = this;
         setInterval(function() {
           _this.allBullet.forEach(val => {
-            if (_this.player.currentTime() == val.videoTime && !_this.isPaused) {
+            if (_this.player.currentTime() == val.videoTime && !_this.isPaused && !_this.isWaiting) {
               _this.bulletAnimate(val.content, val.color, val.fontSize);
             }
           });
@@ -418,12 +450,12 @@
           $(this).remove();
         });
 
-        if (this.isPaused) {
+        if (this.isPaused || this.isWaiting) {
           $('.bullet-wrapper .bullet-text').last().pause();
         }
       },
       bulletPauseTrigger() {
-        if (this.isBulletPause) {
+        if (this.isBulletPause && !this.isWaiting) {
           $('.bullet-wrapper .bullet-text').resume();
           this.isBulletPause = false;
         } else {
@@ -438,8 +470,8 @@
 <style>
   .base-video-wrapper {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 720px;
+    height: 480px;
   }
   .video-wrapper {
     width: 100%;
@@ -587,13 +619,14 @@
     margin: 0 4px;
     cursor: pointer;
   }
-  .ctrl-bullet span, .ctrl-circle span, .ctrl-wide span, .ctrl-full span {
+  .ctrl-bullet span, .ctrl-circle span, .ctrl-wide span, .ctrl-full span, .bullet-color-ctrl span {
     position: absolute;
     color: #fff;
     font-size: 12px;
     background: rgba(10, 10, 10, 0.6);
     padding: 3px;
     display: inline-block;
+    border-radius: 4px;
   }
   .ctrl-bullet span {
     left: -16px;
@@ -610,6 +643,9 @@
   .ctrl-full span {
     left: 42px;
     top: -28px;
+  }
+  .bullet-color-ctrl span {
+    top: -20px;
   }
 
   .bullet-wrapper {
@@ -634,6 +670,10 @@
     display: flex;
     border: 1px solid #ddd;
     border-top: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1002;
   }
   .bullet-ctrl, .bullet-color-ctrl {
     display: flex;
@@ -650,6 +690,7 @@
   }
   .bullet-ctrl i, .bullet-color-ctrl i {
     font-size: 18px;
+    cursor: pointer;
   }
   .bullet-shoot {
     flex: 1;
