@@ -600,6 +600,7 @@
     align-items: center;
     justify-content: space-around;
     background: #fff;
+    z-index: 1200;
   }
   .ctrl-resolution-select span {
     flex: 1;
